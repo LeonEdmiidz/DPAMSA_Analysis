@@ -1,13 +1,16 @@
 import platform
 import numpy as np
-import tkinter as tk
-import tkinter.font as tf
+# Commented out lines of code involving tkinter as a windows machine was not involved in the project
+# tkinter was not used, yet these lines of code made DPAMSA crash as the module was not available on the Cedar cluster
+#import tkinter as tk
+#import tkinter.font as tf
 import copy
 import config
 from itertools import combinations
 
 colors = ["#FFFFFF", "#5CB85C", "#5BC0DE", "#F0AD4E", "#D9534F", "#808080"]
-nucleotides_map = {'A': 1, 'T': 2, 'C': 3, 'G': 4, 'a': 1, 't': 2, 'c': 3, 'g': 4, '-': 5}
+# Updated the nucleotides map to include non-canonical amino acids: N, R, W, K, and Y
+nucleotides_map = {'A': 1, 'T': 2, 'C': 3, 'G': 4, 'a': 1, 't': 2, 'c': 3, 'g': 4, '-': 5, 'N': 1, 'R': 1, 'W': 1, 'K': 2, 'Y': 2}
 nucleotides = ['A', 'T', 'C', 'G', '-']
 
 
@@ -30,11 +33,12 @@ class Environment:
         self.aligned = [[] for _ in range(self.row)]
         self.not_aligned = copy.deepcopy(self.data)
 
-        if platform.system() == "Windows":
-            self.window = tk.Tk()
-            self.__init_size()
-            self.__init_window()
-            self.__init_canvas()
+# Code involving tkinter are commented out
+#        if platform.system() == "Windows":
+#            self.window = tk.Tk()
+#            self.__init_size()
+#            self.__init_window()
+#            self.__init_canvas()
 
     def __action_combination(self):
         res = []
@@ -51,36 +55,37 @@ class Environment:
 
         return res
 
-    def __init_size(self):
-        self.window_default_width = (self.max_len + 2) * self.nucleotide_size if \
-            (self.max_len + 2) * self.nucleotide_size < self.max_window_width else self.max_window_width
-
-        self.window_default_height = self.nucleotide_size * (2 * self.row + 2) + 40
-        self.nucleotide_font = tf.Font(family="bold", size=self.text_size * 2 // 3, weight=tf.BOLD)
-
-    def __init_window(self):
-        self.window.maxsize(self.window_default_width, self.window_default_height)
-        self.window.minsize(self.window_default_width, self.window_default_height)
-        self.window.title("Multiple Sequence Alignment")
-
-    def __init_canvas(self):
-        self.frame = tk.Frame(self.window, width=self.window_default_width,
-                              height=self.window_default_height)
-        self.frame.pack()
-
-        self.canvas = tk.Canvas(self.frame, width=self.nucleotide_size * (self.max_len + 1),
-                                height=self.nucleotide_size * (self.row + 1),
-                                scrollregion=(
-                                    0, 0, self.nucleotide_size * (len(self.aligned[0]) + 1),
-                                    self.nucleotide_size * (self.row + 1)))
-
-        self.scroll = tk.Scrollbar(self.frame, orient="horizontal", width=20)
-        self.scroll.pack(side=tk.BOTTOM, fill=tk.X)
-        self.scroll.config(command=self.canvas.xview)
-        self.canvas.config(xscrollcommand=self.scroll.set, width=self.max_window_width,
-                           height=self.window_default_height)
-
-        self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+# Code involving tkinter are commented out
+#    def __init_size(self):
+#        self.window_default_width = (self.max_len + 2) * self.nucleotide_size if \
+#            (self.max_len + 2) * self.nucleotide_size < self.max_window_width else self.max_window_width
+#
+#        self.window_default_height = self.nucleotide_size * (2 * self.row + 2) + 40
+#        self.nucleotide_font = tf.Font(family="bold", size=self.text_size * 2 // 3, weight=tf.BOLD)
+#
+#    def __init_window(self):
+#        self.window.maxsize(self.window_default_width, self.window_default_height)
+#        self.window.minsize(self.window_default_width, self.window_default_height)
+#        self.window.title("Multiple Sequence Alignment")
+#
+#    def __init_canvas(self):
+#        self.frame = tk.Frame(self.window, width=self.window_default_width,
+#                              height=self.window_default_height)
+#        self.frame.pack()
+#
+#        self.canvas = tk.Canvas(self.frame, width=self.nucleotide_size * (self.max_len + 1),
+#                                height=self.nucleotide_size * (self.row + 1),
+#                                scrollregion=(
+#                                    0, 0, self.nucleotide_size * (len(self.aligned[0]) + 1),
+#                                    self.nucleotide_size * (self.row + 1)))
+#
+#        self.scroll = tk.Scrollbar(self.frame, orient="horizontal", width=20)
+#        self.scroll.pack(side=tk.BOTTOM, fill=tk.X)
+#        self.scroll.config(command=self.canvas.xview)
+#        self.canvas.config(xscrollcommand=self.scroll.set, width=self.max_window_width,
+#                           height=self.window_default_height)
+#
+#        self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
     def __get_current_state(self):
         state = []
@@ -105,47 +110,48 @@ class Environment:
 
         return score
 
-    def __show_alignment(self):
-        self.canvas.delete(tk.ALL)
-        rx_start = self.nucleotide_size // 2
-        ry_start = self.nucleotide_size // 2
-        nx_start = self.nucleotide_size
-        ny_start = self.nucleotide_size
-        for i in range(self.row):
-            for j in range(len(self.aligned[i])):
-                self.canvas.create_rectangle(j * self.nucleotide_size + rx_start,
-                                             i * self.nucleotide_size + ry_start,
-                                             (j + 1) * self.nucleotide_size + rx_start,
-                                             (i + 1) * self.nucleotide_size + ry_start,
-                                             fill=colors[self.aligned[i][j]], outline="#757575")
-                if self.show_nucleotide_name:
-                    self.canvas.create_text(j * self.nucleotide_size + nx_start,
-                                            i * self.nucleotide_size + ny_start,
-                                            text=nucleotides[self.aligned[i][j] - 1],
-                                            font=self.nucleotide_font,
-                                            fill="white")
-
-        ry_start += (self.row + 1) * self.nucleotide_size
-        ny_start += (self.row + 1) * self.nucleotide_size
-        for i in range(self.row):
-            for j in range(len(self.not_aligned[i])):
-                self.canvas.create_rectangle(j * self.nucleotide_size + rx_start,
-                                             i * self.nucleotide_size + ry_start,
-                                             (j + 1) * self.nucleotide_size + rx_start,
-                                             (i + 1) * self.nucleotide_size + ry_start,
-                                             fill=colors[self.not_aligned[i][j]], outline="#757575")
-                if self.show_nucleotide_name:
-                    self.canvas.create_text(j * self.nucleotide_size + nx_start,
-                                            i * self.nucleotide_size + ny_start,
-                                            text=nucleotides[self.not_aligned[i][j] - 1],
-                                            font=self.nucleotide_font,
-                                            fill="white")
-
-        scroll_width = len(self.aligned[0]) if len(self.aligned[0]) > len(self.not_aligned[0]) else \
-            len(self.not_aligned[0])
-        self.canvas['scrollregion'] = (0, 0, self.nucleotide_size * (scroll_width + 1),
-                                       self.nucleotide_size * (self.row + 1))
-        self.window.update()
+# Code involving tkinter are commented out
+#    def __show_alignment(self):
+#        self.canvas.delete(tk.ALL)
+#        rx_start = self.nucleotide_size // 2
+#        ry_start = self.nucleotide_size // 2
+#        nx_start = self.nucleotide_size
+#        ny_start = self.nucleotide_size
+#        for i in range(self.row):
+#            for j in range(len(self.aligned[i])):
+#                self.canvas.create_rectangle(j * self.nucleotide_size + rx_start,
+#                                             i * self.nucleotide_size + ry_start,
+#                                             (j + 1) * self.nucleotide_size + rx_start,
+#                                             (i + 1) * self.nucleotide_size + ry_start,
+#                                             fill=colors[self.aligned[i][j]], outline="#757575")
+#                if self.show_nucleotide_name:
+#                    self.canvas.create_text(j * self.nucleotide_size + nx_start,
+#                                            i * self.nucleotide_size + ny_start,
+#                                            text=nucleotides[self.aligned[i][j] - 1],
+#                                            font=self.nucleotide_font,
+#                                            fill="white")
+#
+#        ry_start += (self.row + 1) * self.nucleotide_size
+#        ny_start += (self.row + 1) * self.nucleotide_size
+#        for i in range(self.row):
+#            for j in range(len(self.not_aligned[i])):
+#                self.canvas.create_rectangle(j * self.nucleotide_size + rx_start,
+#                                             i * self.nucleotide_size + ry_start,
+#                                             (j + 1) * self.nucleotide_size + rx_start,
+#                                             (i + 1) * self.nucleotide_size + ry_start,
+#                                             fill=colors[self.not_aligned[i][j]], outline="#757575")
+#                if self.show_nucleotide_name:
+#                    self.canvas.create_text(j * self.nucleotide_size + nx_start,
+#                                            i * self.nucleotide_size + ny_start,
+#                                            text=nucleotides[self.not_aligned[i][j] - 1],
+#                                            font=self.nucleotide_font,
+#                                            fill="white")
+#
+#        scroll_width = len(self.aligned[0]) if len(self.aligned[0]) > len(self.not_aligned[0]) else \
+#            len(self.not_aligned[0])
+#        self.canvas['scrollregion'] = (0, 0, self.nucleotide_size * (scroll_width + 1),
+#                                       self.nucleotide_size * (self.row + 1))
+#        self.window.update()
 
     def reset(self):
         self.aligned = [[] for _ in range(self.row)]
@@ -201,9 +207,10 @@ class Environment:
         self.aligned = [[nucleotides_map[seqs[i][j]] for j in range(len(seqs[i]))] for i in range(len(seqs))]
         self.not_aligned = [[] for _ in range(len(self.data))]
 
-    def render(self):
-        if platform.system() == "Windows":
-            self.__show_alignment()
+# This project did not involve a Windows machine
+#    def render(self):
+#        if platform.system() == "Windows":
+#            self.__show_alignment()
 
     def get_alignment(self):
         alignment = ""

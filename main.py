@@ -1,23 +1,39 @@
-import dataset3
-import dataset4
-import dataset5
-import dataset6
+# Removed the lines of code importing the unknown datasets
+import sys
+import os
+from tqdm import tqdm
+import config
 from env import Environment
 from dqn import DQN
-import config
-from tqdm import tqdm
-import os
+# The Biopython module is used to load in fasta file datasets
+from Bio import SeqIO
 import torch
-import sys
-
-dataset = dataset5
-
+# The time module is used to record the run time for DPAMSA
+import time
 
 def main():
-    config.device_name = "cuda:{}".format(sys.argv[1])
-    config.device = torch.device(config.device_name)
-    multi_train(dataset.file_name, 0, 25, truncate_file=True)
+    # Included to ensure that the fasta file is being inputted when running the script
+    if len(sys.argv) < 2:
+        print("Usage: python main.py <fasta_file> [<num_datasets>]")
+        return
 
+    # This line ensures that a GPU node is being used if available
+    config.device_name = "cuda:0" if torch.cuda.is_available() else "cpu"
+    config.device = torch.device(config.device_name)
+    # The fasta file provided in the command line is the input dataset to be aligned
+    fasta_file = sys.argv[1]
+
+    # Load sequences from the fasta file using the BioPython tools
+    sequences = {record.id: str(record.seq) for record in SeqIO.parse(fasta_file, "fasta")}
+
+    # This if-then statement ensure that the correct training function is used
+    # For this project, the multi_train function is not used
+    if len(sys.argv) > 2:
+        num_datasets = int(sys.argv[2])
+        multi_train(sequences, num_datasets)
+    else:
+        # Train on single dataset
+        train(sequences)
 
 def output_parameters():
     print("Gap penalty: {}".format(config.GAP_PENALTY))
@@ -34,26 +50,26 @@ def output_parameters():
     print("Update iteration: {}".format(config.update_iteration))
     print("Device: {}".format(config.device_name))
 
-
-def multi_train(tag="", start=0, end=-1, truncate_file=False):
+# Although not used in this project, this function was altered to ensure that the fasta files are loaded in properly
+def multi_train(sequences, num_datasets):
     output_parameters()
-    print("Dataset number: {}".format(len(dataset.datasets)))
+    print("Dataset number: {}".format(num_datasets))
 
-    report_file_name = os.path.join(config.report_path, "{}.rpt".format(tag))
+    report_file_name = os.path.join(config.report_path, "multi_train.rpt")
 
-    if truncate_file:
-        with open(report_file_name, 'w') as _:
-            _.truncate()
+    with open(report_file_name, 'w') as _:
+        _.truncate()
 
-    for index, name in enumerate(dataset.datasets[start:end if end != -1 else len(dataset.datasets)], start):
-        if not hasattr(dataset, name):
-            continue
-        seqs = getattr(dataset, name)
+    # Split sequences into datasets
+    seq_per_dataset = len(sequences) // num_datasets
+    datasets = [sequences[i:i + seq_per_dataset] for i in range(0, len(sequences), seq_per_dataset)]
 
+    # Train on each dataset
+    for index, seqs in enumerate(datasets):
         env = Environment(seqs)
         agent = DQN(env.action_number, env.row, env.max_len, env.max_len * env.max_reward)
         p = tqdm(range(config.max_episode))
-        p.set_description(name)
+        p.set_description(f"Dataset {index + 1}")
 
         for _ in p:
             state = env.reset()
@@ -90,15 +106,20 @@ def multi_train(tag="", start=0, end=-1, truncate_file=False):
             report_file.write(report)
 
 
-def train(index):
+def train(sequences):
     output_parameters()
 
-    assert hasattr(dataset, "dataset_{}".format(index)), "No such data called {}".format("dataset_{}".format(index))
-    data = getattr(dataset, "dataset_{}".format(index))
-
-    print("{}: dataset_{}: {}".format(dataset.file_name, index, data))
-
-    env = Environment(data)
+# Commented out the lines below as they relate to the unspecified data format.
+#    assert hasattr(dataset, "dataset_{}".format(index)), "No such data called {}".format("dataset_{}".format(index))
+#    data = getattr(dataset, "dataset_{}".format(index))
+#    print("{}: dataset_{}: {}".format(dataset.file_name, index, data))
+    # Set the start time to record the run time
+    train_start_time = time.monotonic()
+    # These print statements confirm the sequences that are being aligned
+    print(f"Training on {len(sequences)} sequences:")
+    for key in sequences:  # Iterate over keys and values
+        print(f"Sequence {key}")
+    env = Environment(list(sequences.values()))
     agent = DQN(env.action_number, env.row, env.max_len, env.max_len * env.max_reward)
     p = tqdm(range(config.max_episode))
 
@@ -113,8 +134,18 @@ def train(index):
                 break
             state = next_state
         agent.update_epsilon()
+    # The end time for training is recorded for run time calculation
+    train_end_time = time.monotonic()
+    # Print statement for checkpoint confirmation
+    print("Training Complete")
+    # Run time calculation
+    train_time = train_end_time - train_start_time
+    # Print training time formatted to 2 decimal places
+    print(f"Training time: {train_time:.2f} seconds")
 
-    # Predict
+    # Predicting the alignment based off the training
+    # Record start time for run time calculation
+    predict_start_time = time.monotonic()
     state = env.reset()
     while True:
         action = agent.predict(state)
@@ -122,9 +153,17 @@ def train(index):
         state = next_state
         if 0 == done:
             break
+    # Record end time for run time calculation
+    predict_end_time = time.monotonic()
+    # Print statement for checkpoint confirmation
+    print("Prediction Complete")
+    # Calculate the prediction time
+    predict_time = predict_end_time - predict_start_time
+    # Print predicting time formatted to 2 decimal places
+    print(f"Predict time: {predict_time:.2f} seconds")
 
     env.padding()
-    print("**********dataset: {} **********\n".format(data))
+#    print("**********dataset: {} **********\n".format(data))
     print("total length : {}".format(len(env.aligned[0])))
     print("sp score     : {}".format(env.calc_score()))
     print("exact matched: {}".format(env.calc_exact_matched()))

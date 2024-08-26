@@ -10,7 +10,8 @@ MATCH_REWARD = 4
 update_iteration = 128
 
 batch_size = 128
-max_episode = 6000
+# Altered line of code: Max_episode parameter to test its effects
+max_episode = 120
 replay_memory_size = 1000
 
 alpha = 0.0001
